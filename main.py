@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import StreamingResponse
+from fastapi import HTTPException, Body, responses, status
 import fastapi as _fapi
 
 import schemas as _schemas
@@ -8,11 +9,12 @@ import io
 
 from pydantic import BaseModel
 from typing import Optional
-app = FastAPI()
 
 import base64
 from http.client import HTTPException
 from fastapi.responses import JSONResponse
+
+app = FastAPI()
 
 @app.get("/")
 def read_root():
@@ -65,13 +67,27 @@ async def generate_image_from_text(text_prompt: TextPrompt):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     
+@app.post("/generate2")
+async def generate_image_from_text2(text_prompt: TextPrompt):
+    try:
+        imgPromptCreate = _schemas.ImageCreate(
+            prompt=text_prompt.text,
+            seed=text_prompt.seed,
+            num_inference_steps=text_prompt.num_inference_steps,
+            guidance_scale=text_prompt.guidance_scale
+        )
+        s3_url = await _services.generate_image_and_upload_to_s3(imgPromptCreate)
+        return JSONResponse(content={"s3_url": s3_url})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
     
 @app.post("/generate-image")
 async def create_image_endpoint(imgPrompt: _schemas.ImageCreate):
     try:
         # 이미지 생성 및 S3에 업로드
         image_url = await _services.txt2img(imgPrompt)
-        return {"image_url": image_url}
+        return JSONResponse(content={"image_url": image_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -81,6 +97,6 @@ async def modify_image_endpoint(image_url: str, imgPrompt: _schemas.ImageCreate)
     try:
         # 이미지 수정 및 S3에 업로드
         modified_image_url = await _services.img2img(image_url, imgPrompt)
-        return {"modified_image_url": modified_image_url}
+        return JSONResponse(content={"image_url": modified_image_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")

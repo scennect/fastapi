@@ -14,6 +14,10 @@ import uuid
 import requests
 from fastapi import HTTPException
 import botocore
+import aiohttp
+
+
+
 
 load_dotenv()
 
@@ -98,19 +102,53 @@ async def txt2img(imgPrompt: _schemas.ImageCreate) -> str:
     # 비동기로 S3에 업로드 및 URL 반환
     s3_url = await upload_to_s3(image, BUCKET_NAME, s3_client)
     return s3_url
-
+'''
 async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
     try:
-        response = await requests.get(img_url)
-        response.raise_for_status()
-        initial_img = Image.open(io.BytesIO(response.content))
-        initial_img.verify()  # 이미지 형식 검증
+        # 비동기로 이미지 다운로드
+        async with aiohttp.ClientSession() as session:
+            async with session.get(img_url) as response:
+                if response.status != 200:
+                    raise HTTPException(400, "Failed to fetch image from URL")
+                image_data = await response.read()
+                initial_img = Image.open(io.BytesIO(image_data))
+                initial_img.verify()  # 이미지 검증
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Failed to fetch or verify image from URL: {str(e)}")
+        raise HTTPException(400, f"Failed to fetch or verify image from URL: {str(e)}")
 
-    # 비동기 이미지 수정
-    modified_img = await generate_image(pipe, imgPrompt, init_image=initial_img, strength=0.75)
-    
-    # 비동기로 S3에 업로드 및 URL 반환
-    modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
-    return modified_image_url
+    try:
+        # 이미지 수정 (init_image를 전달하여 호출)
+        modified_img = await generate_image(pipe, imgPrompt, init_image=initial_img, strength=0.75)
+        # S3 업로드
+        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
+        return modified_image_url
+    except botocore.exceptions.ClientError as e:
+        raise HTTPException(500, f"S3 upload failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"Image modification failed: {str(e)}")
+'''
+async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
+    try:
+        # 이미지 URL에서 이미지 다운로드
+        response = requests.get(img_url)
+        if response.status_code != 200:
+            raise HTTPException(400, "Failed to fetch image from URL")
+        image_data = response.content
+        initial_img = Image.open(io.BytesIO(image_data))
+        initial_img.verify()  # 이미지 검증
+    except Exception as e:
+        raise HTTPException(400, f"Failed to fetch or verify image from URL: {str(e)}")
+
+    try:
+        # Stable Diffusion을 사용하여 이미지 수정
+        modified_img = await generate_image(pipe, imgPrompt, init_image=initial_img, strength=0.75)
+        
+        # 수정된 이미지 S3에 업로드
+        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
+        
+        # S3 URL 반환
+        return modified_image_url
+    except botocore.exceptions.ClientError as e:
+        raise HTTPException(500, f"S3 upload failed: {str(e)}")
+    except Exception as e:
+        raise HTTPException(500, f"Image modification failed: {str(e)}")
