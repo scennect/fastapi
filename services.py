@@ -3,7 +3,7 @@ from typing import Optional
 import schemas as _schemas
 
 import torch 
-from diffusers import StableDiffusionPipeline
+from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
 from PIL.Image import Image
 import os
 from dotenv import load_dotenv
@@ -11,10 +11,10 @@ from dotenv import load_dotenv
 import boto3
 import io
 import uuid
-import requests
+
 from fastapi import HTTPException
+
 import botocore
-import aiohttp
 
 
 
@@ -31,6 +31,12 @@ pipe = StableDiffusionPipeline.from_pretrained(
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
     use_auth_token=HF_TOKEN
 )
+pipe2 = StableDiffusionImg2ImgPipeline.from_pretrained(
+    "CompVis/stable-diffusion-v1-4", 
+    revision="fp16", 
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    use_auth_token=HF_TOKEN
+)
 
 # 디바이스 설정
 if torch.backends.mps.is_available():
@@ -39,6 +45,7 @@ else:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
 pipe.to(device)
+pipe2.to(device)
 
 # S3 설정
 s3_client = boto3.client(
@@ -49,14 +56,14 @@ s3_client = boto3.client(
 )
 BUCKET_NAME = 'hongik-s3'
 
-async def generate_image(pipe, imgPrompt: _schemas.ImageCreate, init_image: Optional[Image] = None, strength: float = 0.75) -> Image: 
+async def generate_image(imgPrompt: _schemas.ImageCreate, image: Optional[Image], strength: float = 0.75) -> Image: 
     # Stable Diffusion은 실제로 비동기를 지원하지 않지만, 함수 구조를 일관되게 유지합니다.
     generator = None if imgPrompt.seed is None else torch.Generator(device=device).manual_seed(int(imgPrompt.seed))
 
-    if init_image:
-        result_img : Image = pipe(
+    if image:
+        result_img : Image = pipe2(
             prompt=imgPrompt.prompt,
-            init_image=init_image,
+            image=image,
             strength=strength,
             num_inference_steps=imgPrompt.num_inference_steps,
             guidance_scale=imgPrompt.guidance_scale,
@@ -96,12 +103,7 @@ async def upload_to_s3(image: Image, bucket_name: str, s3_client) -> str:
     image_url = f"https://{bucket_name}.s3.amazonaws.com/{file_name}"
     return image_url
 
-async def txt2img(imgPrompt: _schemas.ImageCreate) -> str:
-    # 비동기 이미지 생성
-    image = await generate_image(pipe, imgPrompt)
-    # 비동기로 S3에 업로드 및 URL 반환
-    s3_url = await upload_to_s3(image, BUCKET_NAME, s3_client)
-    return s3_url
+
 '''
 async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
     try:
@@ -127,28 +129,6 @@ async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
     except Exception as e:
         raise HTTPException(500, f"Image modification failed: {str(e)}")
 '''
-async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
-    try:
-        # 이미지 URL에서 이미지 다운로드
-        response = requests.get(img_url)
-        if response.status_code != 200:
-            raise HTTPException(400, "Failed to fetch image from URL")
-        image_data = response.content
-        initial_img = Image.open(io.BytesIO(image_data))
-        initial_img.verify()  # 이미지 검증
-    except Exception as e:
-        raise HTTPException(400, f"Failed to fetch or verify image from URL: {str(e)}")
 
-    try:
-        # Stable Diffusion을 사용하여 이미지 수정
-        modified_img = await generate_image(pipe, imgPrompt, init_image=initial_img, strength=0.75)
-        
-        # 수정된 이미지 S3에 업로드
-        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
-        
-        # S3 URL 반환
-        return modified_image_url
-    except botocore.exceptions.ClientError as e:
-        raise HTTPException(500, f"S3 upload failed: {str(e)}")
-    except Exception as e:
-        raise HTTPException(500, f"Image modification failed: {str(e)}")
+
+
