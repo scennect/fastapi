@@ -23,7 +23,7 @@ load_dotenv()
 
 # Get the token from HuggingFace 
 HF_TOKEN = os.getenv('HF_TOKEN')
-
+BUCKET_NAME = os.getenv('BUCKET_NAME')
 
 #model_id = "CompVis/stable-diffusion-v1-4"
 model_id = "stabilityai/stable-diffusion-2"
@@ -68,7 +68,7 @@ s3_client = boto3.client(
     aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
     region_name=os.getenv('AWS_REGION')
 )
-BUCKET_NAME = 'hongik-s3'
+
 
 async def generate_image(imgPrompt: _schemas.ImageCreate, image: Optional[Image]=None) -> Image: 
     # Stable Diffusion은 실제로 비동기를 지원하지 않지만, 함수 구조를 일관되게 유지합니다.

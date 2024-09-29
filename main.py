@@ -69,7 +69,6 @@ async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     try:
         # 이미지 생성 및 S3에 업로드
         #image_url = await _services.txt2img(imgPrompt)
-        print(text_prompt.text)
         imgPrompt=_schemas.ImageCreate(prompt = text_prompt.text)
         image_url = await txt2img(imgPrompt)
         return JSONResponse(content={"image_url": image_url})
