@@ -8,7 +8,7 @@ from img2img import img2img
 from txt2img import txt2img
 import io
 
-from pydantic import BaseModel
+import pydantic as pydantic
 from typing import Optional
 app = FastAPI()
 
@@ -35,14 +35,10 @@ async def generate_image(imgPromptCreate: _schemas.ImageCreate = _fapi.Depends()
     memory_stream.seek(0)
     return StreamingResponse(memory_stream, media_type="image/png")
 #----------------------------------------------------------------------------------
-class TextPrompt(BaseModel):
-    text: str
-    seed: Optional[int] = 42
-    num_inference_steps: int = 10
-    guidance_scale: float = 7.5
+
 
 @app.post("/generate")
-async def generate_image_from_text(text_prompt: TextPrompt):
+async def generate_image_from_text(text_prompt: _schemas.SpringRequest):
     try:
         imgPromptCreate = _schemas.ImageCreate(
             prompt=text_prompt.text,
@@ -69,10 +65,12 @@ async def generate_image_from_text(text_prompt: TextPrompt):
     
     
 @app.post("/generate-image")
-async def create_image_endpoint(imgPrompt: _schemas.ImageCreate):
+async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     try:
         # 이미지 생성 및 S3에 업로드
         #image_url = await _services.txt2img(imgPrompt)
+        print(text_prompt.text)
+        imgPrompt=_schemas.ImageCreate(prompt = text_prompt.text)
         image_url = await txt2img(imgPrompt)
         return JSONResponse(content={"image_url": image_url})
     except Exception as e:
@@ -80,23 +78,19 @@ async def create_image_endpoint(imgPrompt: _schemas.ImageCreate):
 
 # 이미지 수정 엔드포인트 (기존 이미지와 텍스트를 받아 수정)
 @app.post("/modify-image")
-async def modify_image_endpoint(image_url: str, imgPrompt: _schemas.ImageCreate):
+async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
     try:
         # 이미지 수정 및 S3에 업로드
         #modified_image_url = await _services.txt2img(image_url, imgPrompt)
-        modified_image_url = await img2img(image_url, imgPrompt)
+        imgPromptCreate = _schemas.ImageCreate(
+            prompt=imgPrompt.text               # Map 'text' to 'prompt'
+            # negative_prompt="",              # Provide negative prompt if needed  
+        )
+        
+        image_url=imgPrompt.parentImageURL
+        
+        modified_image_url = await img2img(image_url, imgPromptCreate)
         
         return JSONResponse(content={"modified_image_url": modified_image_url})
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
-
-
-# @app.post("/modify-image")
-# async def modify_image_endpoint(request: _schemas.Img2ImgRequest):
-#     try:
-#         image = download_image(request.image_url)
-        
-#         image_url = img2img(image, request.prompt)
-#         return JSONResponse(content={"image_url": image_url})
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=str(e))

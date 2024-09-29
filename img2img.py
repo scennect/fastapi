@@ -58,7 +58,7 @@ async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
        response = requests.get(img_url)
        init_image = Image.open(io.BytesIO(response.content)).convert("RGB")
        
-       modified_img = await generate_image(imgPrompt, image=init_image, strength=0.75)
+       modified_img = await generate_image(imgPrompt, image=init_image)
        
        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
         
