@@ -10,13 +10,9 @@ class _PromptBase(_pydantic.BaseModel):
 
 class ImageCreate(_PromptBase):
     prompt: str
-    negative_prompt: str = None
+    negative_prompt: Optional[str] = None # 추후 수정사항 
 
 
 class SpringRequest(_pydantic.BaseModel):
-    username: str
-    text: str
+    prompt: Optional[str] = None
     imageURL: Optional[str] = None
-    parentNodeId: Optional[int] = None
-    projectId: Optional[int] = None
-    parentImageURL: Optional[str] = None

@@ -69,9 +69,10 @@ async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     try:
         # 이미지 생성 및 S3에 업로드
         #image_url = await _services.txt2img(imgPrompt)
-        imgPrompt=_schemas.ImageCreate(prompt = text_prompt.text)
+        imgPrompt=_schemas.ImageCreate(prompt = text_prompt.prompt)
         image_url = await txt2img(imgPrompt)
-        return JSONResponse(content={"image_url": image_url})
+        #return JSONResponse(content={"image_url": image_url})
+        return image_url
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
@@ -82,14 +83,15 @@ async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
         # 이미지 수정 및 S3에 업로드
         #modified_image_url = await _services.txt2img(image_url, imgPrompt)
         imgPromptCreate = _schemas.ImageCreate(
-            prompt=imgPrompt.text               # Map 'text' to 'prompt'
+            prompt=imgPrompt.prompt               # Map 'text' to 'prompt'
             # negative_prompt="",              # Provide negative prompt if needed  
         )
         
-        image_url=imgPrompt.parentImageURL
+        image_url=imgPrompt.imageURL
         
         modified_image_url = await img2img(image_url, imgPromptCreate)
         
-        return JSONResponse(content={"modified_image_url": modified_image_url})
+        #return JSONResponse(content={"modified_image_url": modified_image_url})
+        return modified_image_url
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
