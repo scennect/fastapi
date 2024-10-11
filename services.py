@@ -27,6 +27,7 @@ BUCKET_NAME = os.getenv('BUCKET_NAME')
 
 #model_id = "CompVis/stable-diffusion-v1-4"
 model_id = "stabilityai/stable-diffusion-2"
+#model_id = "stabilityai/stable-diffusion-xl-base-1.0"
 #lora_model_path = "Shakker-Labs/FLUX.1-dev-LoRA-AntiBlur"
 # Create the pipe 
 pipe = StableDiffusionPipeline.from_pretrained(
