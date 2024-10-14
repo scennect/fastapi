@@ -122,6 +122,9 @@ async def upload_to_s3(image: Image, bucket_name: str, s3_client) -> str:
 
 
 
-
-
+def request_prompt(prompt : str)->str:
+    txt_sd = "라는 내용으로 stable diffusion 2.0 모델을 써서 그리고 싶습니다."
+    txt_limit = "200자 이내의 프롬프트로 이루어진 문장으로 답변해주세요. 영어로 부탁합니다."
+    
+    return prompt+txt_sd+txt_limit
 

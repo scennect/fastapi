@@ -2,7 +2,7 @@ import pydantic as _pydantic
 from typing import Optional
 
 class _PromptBase(_pydantic.BaseModel):
-    seed: Optional[int] = 42
+    seed: Optional[int] = 42 # random 
     num_inference_steps: int = 10
     guidance_scale: float = 7.5
     strength: float = 0.75 # for img2img

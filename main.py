@@ -4,6 +4,7 @@ import fastapi as _fapi
 
 import schemas as _schemas
 import services as _services
+from prompt import *
 from img2img import img2img
 from txt2img import txt2img
 import io
@@ -67,9 +68,8 @@ async def generate_image_from_text(text_prompt: _schemas.SpringRequest):
 @app.post("/generate-image")
 async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     try:
-        # 이미지 생성 및 S3에 업로드
-        #image_url = await _services.txt2img(imgPrompt)
-        imgPrompt=_schemas.ImageCreate(prompt = text_prompt.prompt)
+        # 이미지 생성 및 S3에 업로드  
+        imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
         image_url = await txt2img(imgPrompt)
         #return JSONResponse(content={"image_url": image_url})
         return image_url
@@ -80,10 +80,10 @@ async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
 @app.post("/modify-image")
 async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
     try:
+        
         # 이미지 수정 및 S3에 업로드
-        #modified_image_url = await _services.txt2img(image_url, imgPrompt)
         imgPromptCreate = _schemas.ImageCreate(
-            prompt=imgPrompt.prompt               # Map 'text' to 'prompt'
+            prompt=prompt_api(imgPrompt.prompt)               # Map 'text' to 'prompt'
             # negative_prompt="",              # Provide negative prompt if needed  
         )
         
@@ -95,3 +95,8 @@ async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
         return modified_image_url
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
+
+
+@app.get("/test")
+def test(text_prompt: _schemas.SpringRequest):
+    return request_prompt(text_prompt.prompt)
