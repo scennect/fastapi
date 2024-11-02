@@ -3,8 +3,8 @@ from typing import Optional
 import schemas as _schemas
 
 import torch 
-from peft import PeftModel
 from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
+from diffusers import AutoPipelineForText2Image, AutoPipelineForImage2Image
 from PIL.Image import Image
 import os
 from dotenv import load_dotenv
@@ -25,30 +25,40 @@ load_dotenv()
 HF_TOKEN = os.getenv('HF_TOKEN')
 BUCKET_NAME = os.getenv('BUCKET_NAME')
 
-#model_id = "CompVis/stable-diffusion-v1-4"
-model_id = "stabilityai/stable-diffusion-2"
-#model_id = "stabilityai/stable-diffusion-xl-base-1.0"
-#lora_model_path = "Shakker-Labs/FLUX.1-dev-LoRA-AntiBlur"
+# model_id = "CompVis/stable-diffusion-v1-4"
+#model_id = "stabilityai/stable-diffusion-2"
+# model_id = "stabilityai/stable-diffusion-xl-base-1.0"
+model_id= "stabilityai/sdxl-turbo"
 # Create the pipe 
+'''
 pipe = StableDiffusionPipeline.from_pretrained(
     model_id, 
     revision="fp16", 
     torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    #torch_dtype=torch.float32,
     use_auth_token=HF_TOKEN,
     safety_checker = None,
     requires_safety_checker = False
 )
 pipe2 = StableDiffusionImg2ImgPipeline.from_pretrained(
-    "CompVis/stable-diffusion-v1-4", 
-    revision="fp16", 
-    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    model_id, 
+    #revision="fp16", # test needed
+    torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32, # test needed
     use_auth_token=HF_TOKEN,
     safety_checker = None,
     requires_safety_checker = False
 )
-
-
-
+'''
+pipe = AutoPipelineForText2Image.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    variant="fp16"
+)
+pipe2 = AutoPipelineForImage2Image.from_pretrained(
+    model_id,
+    torch_dtype=torch.float16,
+    variant="fp16"
+)
 # 디바이스 설정
 if torch.backends.mps.is_available():
     device = "mps"
@@ -57,9 +67,10 @@ else:
 
 pipe.to(device)
 pipe2.to(device)
-
-# lora 설정
-#pipe.unet = PeftModel.from_pretrained(pipe.unet, lora_model_path, torch_dtype=torch.float16)
+pipe.enable_attention_slicing()
+pipe.enable_sequential_cpu_offload()
+pipe2.enable_attention_slicing()
+pipe2.enable_sequential_cpu_offload()
 
 
 # S3 설정
@@ -72,25 +83,29 @@ s3_client = boto3.client(
 
 
 async def generate_image(imgPrompt: _schemas.ImageCreate, image: Optional[Image]=None) -> Image: 
-    # Stable Diffusion은 실제로 비동기를 지원하지 않지만, 함수 구조를 일관되게 유지합니다.
     generator = None if imgPrompt.seed is None else torch.Generator(device=device).manual_seed(int(imgPrompt.seed))
 
     if image:
-        result_img : Image = pipe2(
+        result_img : Image = pipe2( # img2img
             prompt=imgPrompt.prompt,
-            negative_prompt=imgPrompt.negative_prompt,
+            #negative_prompt=imgPrompt.negative_prompt,
             image=image,
-            strength=imgPrompt.strength,
-            num_inference_steps=imgPrompt.num_inference_steps,
-            guidance_scale=imgPrompt.guidance_scale,
+            #strength=imgPrompt.strength,
+            strength = 0.5,
+            #num_inference_steps=imgPrompt.num_inference_steps,
+            #guidance_scale=imgPrompt.guidance_scale,
+            num_inference_steps= 10,
+            guidance_scale=0.0,
             generator=generator
         ).images[0]
     else:
-        result_img : Image = pipe(
+        result_img : Image = pipe( #txt2img
             prompt=imgPrompt.prompt,
-            negative_prompt=imgPrompt.negative_prompt,
-            num_inference_steps=imgPrompt.num_inference_steps,
-            guidance_scale=imgPrompt.guidance_scale,
+            #negative_prompt=imgPrompt.negative_prompt,
+            #num_inference_steps=imgPrompt.num_inference_steps,
+            #guidance_scale=imgPrompt.guidance_scale,
+            num_inference_steps= 1,
+            guidance_scale=0.0,
             generator=generator
         ).images[0]
 

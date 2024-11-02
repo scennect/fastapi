@@ -68,7 +68,8 @@ async def generate_image_from_text(text_prompt: _schemas.SpringRequest):
 @app.post("/generate-image")
 async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     try:
-        # 이미지 생성 및 S3에 업로드  
+        # 이미지 생성 및 S3에 업로드
+        #tmp = prompt_api(text_prompt.prompt)
         imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
         image_url = await txt2img(imgPrompt)
         #return JSONResponse(content={"image_url": image_url})
@@ -100,3 +101,7 @@ async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
 @app.get("/test")
 def test(text_prompt: _schemas.SpringRequest):
     return request_prompt(text_prompt.prompt)
+
+# @app.post("/test-modify")
+# async def modify_image_test(imgPrompt:_schemas.SpringRequest):
+    
