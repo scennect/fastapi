@@ -77,31 +77,45 @@ async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
 
-# 이미지 수정 엔드포인트 (기존 이미지와 텍스트를 받아 수정)
-@app.post("/modify-image")
-async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
-    try:
+#이미지 수정 엔드포인트 (기존 이미지와 텍스트를 받아 수정)
+# @app.post("/modify-image")
+# async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
+#     try:
         
-        # 이미지 수정 및 S3에 업로드
-        imgPromptCreate = _schemas.ImageCreate(
-            prompt=prompt_api(imgPrompt.prompt)               # Map 'text' to 'prompt'
-            # negative_prompt="",              # Provide negative prompt if needed  
-        )
+#         # 이미지 수정 및 S3에 업로드
+#         imgPromptCreate = _schemas.ImageCreate(
+#             prompt=prompt_api(imgPrompt.prompt)               # Map 'text' to 'prompt'
+#             # negative_prompt="",              # Provide negative prompt if needed  
+#         )
         
-        image_url=imgPrompt.imageURL
+#         image_url=imgPrompt.imageURL
         
-        modified_image_url = await img2img(image_url, imgPromptCreate)
+#         modified_image_url = await img2img(image_url, imgPromptCreate)
         
-        #return JSONResponse(content={"modified_image_url": modified_image_url})
-        return modified_image_url
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
+#         #return JSONResponse(content={"modified_image_url": modified_image_url})
+#         return modified_image_url
+#     except Exception as e:
+#         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
 
 
 @app.get("/test")
 def test(text_prompt: _schemas.SpringRequest):
     return request_prompt(text_prompt.prompt)
 
-# @app.post("/test-modify")
-# async def modify_image_test(imgPrompt:_schemas.SpringRequest):
+@app.post("/txt2img-test")
+async def modify_image_test(text_prompt:_schemas.SpringRequest):
+    imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
+    image_url = await txt2img(imgPrompt)
+    return image_url
+
+@app.post("/img2img-test")
+async def modify_image_test(imgPrompt:_schemas.SpringRequest):
+    image_url=imgPrompt.imageURL # 이미지 url
+    
+    #imgPromptCreate=_schemas.ImageCreate(prompt = prompt_api(imgPrompt.prompt)) # 이미지 프롬프트
+    imgPromptCreate=_schemas.ImageCreate(prompt = imgPrompt.prompt) # 이미지 프롬프트
+    
+    result = await img2img(img_url=image_url,imgPrompt=imgPromptCreate)
+    return result
+
     
