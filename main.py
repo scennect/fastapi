@@ -112,8 +112,8 @@ async def modify_image_test(text_prompt:_schemas.SpringRequest):
 async def modify_image_test(imgPrompt:_schemas.SpringRequest):
     image_url=imgPrompt.imageURL # 이미지 url
     
-    #imgPromptCreate=_schemas.ImageCreate(prompt = prompt_api(imgPrompt.prompt)) # 이미지 프롬프트
-    imgPromptCreate=_schemas.ImageCreate(prompt = imgPrompt.prompt) # 이미지 프롬프트
+    imgPromptCreate=_schemas.ImageCreate(prompt = prompt_api(imgPrompt.prompt)) # 이미지 프롬프트
+    #imgPromptCreate=_schemas.ImageCreate(prompt = imgPrompt.prompt) # 이미지 프롬프트
     
     result = await img2img(img_url=image_url,imgPrompt=imgPromptCreate)
     return result

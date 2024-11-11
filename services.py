@@ -1,10 +1,10 @@
-from pathlib import Path
-from typing import Optional 
+#from pathlib import Path
+#from typing import Optional 
 import schemas as _schemas
 
 import torch 
-from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
-from diffusers import AutoPipelineForText2Image, AutoPipelineForImage2Image
+#from diffusers import StableDiffusionPipeline, StableDiffusionImg2ImgPipeline
+#from diffusers import AutoPipelineForText2Image, AutoPipelineForImage2Image
 
 from PIL import Image
 import os
@@ -150,7 +150,7 @@ def request_prompt(prompt : str)->str:
 
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from fastapi.responses import StreamingResponse
+
 
 
 # 세션 및 재시도 설정
@@ -178,7 +178,7 @@ def connect_txt2img(imgPrompt: _schemas.ImageCreate) ->Image:
     
     try:
         # Send request to the Stable Diffusion API
-        response = session.post(url, json=payload, timeout=10)
+        response = session.post(url, json=payload, timeout=300)
         response.raise_for_status()
         
         # Decode the base64 image returned by the API
@@ -219,7 +219,7 @@ def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
     } 
     try:
         # Send the request to the Stable Diffusion API
-        response = session.post(url, json=payload, timeout=10)
+        response = session.post(url, json=payload, timeout=300)
         response.raise_for_status()
         
         # Decode the base64 image returned by the API
