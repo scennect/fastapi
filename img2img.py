@@ -15,14 +15,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
     try:
         #이미지 URL에서 이미지 다운로드
-        '''
-        response = requests.get(img_url)
-        if response.status_code != 200:
-            raise HTTPException(400, "Failed to fetch image from URL")
-        init_image = Image.open(io.BytesIO(response.content)).convert("RGB")
-        init_image = init_image.resize((512,512))
-        #modified_img = await generate_image(imgPrompt, image=init_image)
-        '''
         modified_img = connect_img2img(img_url=img_url,imgPrompt=imgPrompt)
         modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
         return modified_image_url

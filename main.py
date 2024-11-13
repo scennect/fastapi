@@ -15,7 +15,14 @@ app = FastAPI()
 
 import base64
 from http.client import HTTPException
-from fastapi.responses import JSONResponse
+#from fastapi.responses import JSONResponse
+# from transformers import pipeline,GPT2Tokenizer
+# import torch
+
+# pipe = pipeline('text-generation', model='Ar4ikov/gpt2-650k-stable-diffusion-prompt-generator',device=0)
+# tokenizer = GPT2Tokenizer.from_pretrained('Ar4ikov/gpt2-650k-stable-diffusion-prompt-generator')
+# tokenizer.pad_token = tokenizer.eos_token
+
 
 @app.get("/")
 def read_root():
@@ -26,94 +33,27 @@ def read_root():
 async def root():
     return {"message": "Welcome to the Demo of StableDiffusers with FastAPI"}
 
-@app.get("/api/generate/")
-async def generate_image(imgPromptCreate: _schemas.ImageCreate = _fapi.Depends()):
-    
-    image = await _services.generate_image(imgPrompt=imgPromptCreate)
-
-    memory_stream = io.BytesIO()
-    image.save(memory_stream, format="PNG")
-    memory_stream.seek(0)
-    return StreamingResponse(memory_stream, media_type="image/png")
-#----------------------------------------------------------------------------------
-
-
-@app.post("/generate")
-async def generate_image_from_text(text_prompt: _schemas.SpringRequest):
-    try:
-        imgPromptCreate = _schemas.ImageCreate(
-            prompt=text_prompt.text,
-            seed=text_prompt.seed,
-            num_inference_steps=text_prompt.num_inference_steps,
-            guidance_scale=text_prompt.guidance_scale
-        )
-        #image = await _services.generate_image(imgPrompt=imgPromptCreate)
-
-        #memory_stream = io.BytesIO()
-        #image.save(memory_stream, format="PNG")
-        #memory_stream.seek(0)
-
-        #img_str = base64.b64encode(memory_stream.read()).decode('utf-8')
-        #return JSONResponse(content={"image": img_str})
-
-        #return StreamingResponse(memory_stream, media_type="image/png")
-
-        s3_url = await _services.txt2img(imgPromptCreate)
-        return JSONResponse(content={"s3_url": s3_url})
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-    
-    
-@app.post("/generate-image")
-async def create_image_endpoint(text_prompt: _schemas.SpringRequest):
-    try:
-        # 이미지 생성 및 S3에 업로드
-        #tmp = prompt_api(text_prompt.prompt)
-        imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
-        image_url = await txt2img(imgPrompt)
-        #return JSONResponse(content={"image_url": image_url})
-        return image_url
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Image generation failed: {str(e)}")
-
-#이미지 수정 엔드포인트 (기존 이미지와 텍스트를 받아 수정)
-# @app.post("/modify-image")
-# async def modify_image_endpoint(imgPrompt:_schemas.SpringRequest):
-#     try:
-        
-#         # 이미지 수정 및 S3에 업로드
-#         imgPromptCreate = _schemas.ImageCreate(
-#             prompt=prompt_api(imgPrompt.prompt)               # Map 'text' to 'prompt'
-#             # negative_prompt="",              # Provide negative prompt if needed  
-#         )
-        
-#         image_url=imgPrompt.imageURL
-        
-#         modified_image_url = await img2img(image_url, imgPromptCreate)
-        
-#         #return JSONResponse(content={"modified_image_url": modified_image_url})
-#         return modified_image_url
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Image modification failed: {str(e)}")
-
-
-@app.get("/test")
-def test(text_prompt: _schemas.SpringRequest):
-    return request_prompt(text_prompt.prompt)
-
 @app.post("/txt2img-test")
 async def modify_image_test(text_prompt:_schemas.SpringRequest):
+    
+    #valid_prompt = get_valid_prompt(pipe(
+    #     get_valid_prompt(text_prompt.prompt), max_length=77)[0]['generated_text'])
+    #logging.info(f"Generated prompt : {valid_prompt}") # 응답 로그
+    #imgPrompt=_schemas.ImageCreate(prompt = valid_prompt)
     imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
+    
     image_url = await txt2img(imgPrompt)
     return image_url
 
 @app.post("/img2img-test")
 async def modify_image_test(imgPrompt:_schemas.SpringRequest):
     image_url=imgPrompt.imageURL # 이미지 url
-    
+    #valid_prompt = get_valid_prompt(pipe(
+    #     get_valid_prompt(imgPrompt.prompt), max_length=77)[0]['generated_text'])
+    #logging.info(f"Generated prompt : {valid_prompt}") # 응답 로그
+    #imgPromptCreate=_schemas.ImageCreate(prompt = valid_prompt) # 이미지 프롬프트
     imgPromptCreate=_schemas.ImageCreate(prompt = prompt_api(imgPrompt.prompt)) # 이미지 프롬프트
-    #imgPromptCreate=_schemas.ImageCreate(prompt = imgPrompt.prompt) # 이미지 프롬프트
+    
     
     result = await img2img(img_url=image_url,imgPrompt=imgPromptCreate)
     return result

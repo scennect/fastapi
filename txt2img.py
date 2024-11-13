@@ -5,7 +5,7 @@ from services import *
 
 async def txt2img(imgPrompt: _schemas.ImageCreate) -> str:
     # 비동기 이미지 생성
-    #image = await generate_image(imgPrompt)
+    
     image = connect_txt2img(imgPrompt=imgPrompt)
     # 비동기로 S3에 업로드 및 URL 반환
     s3_url = await upload_to_s3(image, BUCKET_NAME, s3_client)
