@@ -91,7 +91,7 @@ def connect_txt2img(imgPrompt: _schemas.ImageCreate) ->Image:
     
     payload = {
         
-        "negative_prompt" :" negativeXL_D",
+        "negative_prompt" :" negativeXL_D, DeepNegative_xl_v1",
         "prompt": imgPrompt.prompt,
         "sampler_name" :"DPM++ SDE",
         "scheduler" : "Karras",
@@ -135,7 +135,7 @@ def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
     image_base64 = base64.b64encode(buffer.getvalue()).decode("utf-8")
     
     payload = {
-        "negative_prompt" :" negativeXL_D",
+        "negative_prompt" :" negativeXL_D, DeepNegative_xl_v1",
         "prompt": imgPrompt.prompt,
         "sampler_name" :"DPM++ SDE",
         "scheduler" : "Karras",
