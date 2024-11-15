@@ -25,13 +25,13 @@ def read_root():
 async def root():
     return {"message": "Welcome to the Demo of StableDiffusers with FastAPI"}
 
-@app.post("/txt2img-test")
+@app.post("/generate-image")
 async def modify_image_test(text_prompt:_schemas.SpringRequest):
     imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
     image_url = await txt2img(imgPrompt)
     return image_url
 
-@app.post("/img2img-test")
+@app.post("/modify-image")
 async def modify_image_test(imgPrompt:_schemas.SpringRequest):
     image_url=imgPrompt.imageURL # 이미지 url
     
