@@ -141,3 +141,4 @@ req2.txt
 dev-requirements.txt
 services_old.py
 *.txt
+.gitignore

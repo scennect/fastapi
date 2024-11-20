@@ -18,7 +18,7 @@ from fastapi import HTTPException
 import botocore
 import requests
 import base64
-
+import logging
 
 
 load_dotenv()
@@ -162,3 +162,31 @@ def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Request to Stable Diffusion API failed: {e}")
     
+def test_json(imgPrompt: _schemas.ImageCreate) :
+    url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
+    
+    payload = {
+        
+        "negative_prompt" :" negativeXL_D, DeepNegative_xl_v1",
+        "prompt": imgPrompt.prompt,
+        "sampler_name" :"DPM++ SDE",
+        "scheduler" : "Karras",
+        "steps": 8,
+        "cfg_scale": 2,
+        "width": 512,
+        "height": 512
+    }
+    
+    try:
+        # Send request to the Stable Diffusion API
+        response = session.post(url, json=payload, timeout=300)
+        response.raise_for_status()
+        
+        result = response.json()
+        info = result["info"]
+        seed = info.get("seed")
+        logging.info(f"Seed_used: {seed}")
+        return result
+    
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=f"Request to Stable Diffusion API failed: {e}")

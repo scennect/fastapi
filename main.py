@@ -5,7 +5,7 @@ import schemas as _schemas
 import services as _services
 from prompt import *
 from img2img import img2img
-from txt2img import txt2img
+from txt2img import *
 import io
 
 import pydantic as pydantic
@@ -42,4 +42,9 @@ async def modify_image_test(imgPrompt:_schemas.SpringRequest):
     result = await img2img(img_url=image_url,imgPrompt=imgPromptCreate)
     return result
 
-    
+@app.post("/test")
+async def test_api(text_prompt:_schemas.SpringRequest):
+    imgPrompt=_schemas.ImageCreate(prompt = prompt_api(text_prompt.prompt))
+    #imgPrompt=_schemas.ImageCreate(prompt = text_prompt.prompt)
+    image_url = await txt2img_test(imgPrompt)
+    return image_url
