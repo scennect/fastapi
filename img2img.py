@@ -12,11 +12,11 @@ import numpy as np
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate) -> str:
+async def img2img(img_url: str, imgPrompt: _schemas.ImageCreate, seed):
     try:
         #이미지 URL에서 이미지 다운로드
-        modified_img = connect_img2img(img_url=img_url,imgPrompt=imgPrompt)
-        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client)
+        modified_img,seed2 = connect_img2img(img_url=img_url,imgPrompt=imgPrompt,seed=seed)
+        modified_image_url = await upload_to_s3(modified_img, BUCKET_NAME, s3_client,seed2)
         return modified_image_url
     except Exception as e:
         raise HTTPException(400, f"Failed to fetch or verify image from URL: {str(e)}")

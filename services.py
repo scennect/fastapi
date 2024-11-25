@@ -19,6 +19,7 @@ import botocore
 import requests
 import base64
 import logging
+import json
 
 
 load_dotenv()
@@ -36,14 +37,14 @@ s3_client = boto3.client(
     region_name=os.getenv('AWS_REGION')
 )
 
-async def upload_to_s3(image: Image, bucket_name: str, s3_client) -> str:
+async def upload_to_s3(image: Image, bucket_name: str, s3_client,seed) -> str:
     # 이미지 메모리 스트림에 저장
     memory_stream = io.BytesIO()
     image.save(memory_stream, format="PNG")
     memory_stream.seek(0)
     
     # 파일 이름 생성
-    file_name = f"{str(uuid.uuid4())}.png"
+    file_name = f"{str(uuid.uuid4())}={seed}.png"
     
     try:
         # S3에 비동기로 업로드
@@ -86,7 +87,7 @@ adapter = HTTPAdapter(max_retries=retry)
 session.mount("http://", adapter)
 session.mount("https://", adapter)
 
-def connect_txt2img(imgPrompt: _schemas.ImageCreate) ->Image:
+def connect_txt2img(imgPrompt: _schemas.ImageCreate):
     url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
     
     payload = {
@@ -107,18 +108,24 @@ def connect_txt2img(imgPrompt: _schemas.ImageCreate) ->Image:
         response.raise_for_status()
         
         # Decode the base64 image returned by the API
-        image_base64 = response.json()["images"][0]
+        result = response.json()
+        image_base64 = result["images"][0]
         image_data = base64.b64decode(image_base64)
         
         # Convert to BytesIO for streaming
         image = Image.open(io.BytesIO(image_data))
         
-        return image
+        #seed test
+        info = json.loads(result["info"])
+        seed = info["seed"]
+        logging.info(f"Seed_used: {seed}")
+        
+        return image,seed
     
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Request to Stable Diffusion API failed: {e}")
     
-def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
+def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate, seed):
     url = "http://127.0.0.1:7860/sdapi/v1/img2img"
     
     # Download the initial image from the given URL
@@ -137,13 +144,14 @@ def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
     payload = {
         "negative_prompt" :" negativeXL_D, DeepNegative_xl_v1",
         "prompt": imgPrompt.prompt,
+        "seed": seed,
         "sampler_name" :"DPM++ SDE",
         "scheduler" : "Karras",
         "steps": 8,
         "cfg_scale": 2,
         "width": 512,
         "height": 512,
-        "init_images": [image_base64]
+        "init_images": [image_base64]   
     } 
     try:
         # Send the request to the Stable Diffusion API
@@ -151,42 +159,20 @@ def connect_img2img(img_url:str, imgPrompt: _schemas.ImageCreate)->Image:
         response.raise_for_status()
         
         # Decode the base64 image returned by the API
-        result_image_base64 = response.json()["images"][0]
+        result = response.json()
+        result_image_base64 = result["images"][0]
         result_image_data = base64.b64decode(result_image_base64)
         
         # Open the result as a PIL Image
         result_image = Image.open(io.BytesIO(result_image_data))
         
-        return result_image
+        #seed test
+        info = json.loads(result["info"])
+        seed2 = info["seed"]
+        logging.info(f"Seed_used: {seed2}")
+        
+        return result_image,seed2
     
     except requests.exceptions.RequestException as e:
         raise HTTPException(status_code=500, detail=f"Request to Stable Diffusion API failed: {e}")
     
-def test_json(imgPrompt: _schemas.ImageCreate) :
-    url = "http://127.0.0.1:7860/sdapi/v1/txt2img"
-    
-    payload = {
-        
-        "negative_prompt" :" negativeXL_D, DeepNegative_xl_v1",
-        "prompt": imgPrompt.prompt,
-        "sampler_name" :"DPM++ SDE",
-        "scheduler" : "Karras",
-        "steps": 8,
-        "cfg_scale": 2,
-        "width": 512,
-        "height": 512
-    }
-    
-    try:
-        # Send request to the Stable Diffusion API
-        response = session.post(url, json=payload, timeout=300)
-        response.raise_for_status()
-        
-        result = response.json()
-        info = result["info"]
-        seed = info.get("seed")
-        logging.info(f"Seed_used: {seed}")
-        return result
-    
-    except requests.exceptions.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Request to Stable Diffusion API failed: {e}")

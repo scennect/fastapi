@@ -16,3 +16,4 @@ class ImageCreate(_PromptBase):
 class SpringRequest(_pydantic.BaseModel):
     prompt: Optional[str] = None
     imageURL: Optional[str] = None
+    seed_check : Optional[bool] = None
