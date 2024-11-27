@@ -37,7 +37,7 @@ async def modify_image_test(imgPrompt:_schemas.SpringRequest):
     image_url=imgPrompt.imageURL # 이미지 url
     tmp = image_url.split('=')
     seed = str(tmp[1]).split('.')[0]
-    seed_check = imgPrompt.seed_check
+    seed_check = imgPrompt.seed
     if seed_check == False : seed = -1
     logging.info(f"input seed: {seed}")
     imgPromptCreate=_schemas.ImageCreate(prompt = prompt_api(imgPrompt.prompt)) # 이미지 프롬프트
